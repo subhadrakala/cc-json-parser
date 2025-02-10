@@ -3,9 +3,8 @@ import * as Constants from "./constant.js";
 export function parseData(data) {
     // replace all white spaces
     data = replaceWhiteSpace(data);
-    const tokens = generateTokens(data)
-    console.log(tokens); 
     try {
+        const tokens = generateTokens(data)
         analyzeSyntax(tokens, 0);
         return true;
     }
@@ -176,22 +175,28 @@ function  parseObject(tokens, position) {
 }
 
 function parseArray(tokens, position) {
-    position = parseArrayValues(tokens, position + 1);
+    position++;
+    if (tokens[position].value !== Constants.RIGHT_SQUARE_BRACKET) {
+        position = parseArrayValues(tokens, position);
+    }
+
     if (tokens[position].value === Constants.RIGHT_SQUARE_BRACKET) {
         return position;
+    }
+    else {
+        console.error('Expected a right square bracket');
+        throw new Error('Expected a right square bracket');
     }
 }
 
 function parseArrayValues(tokens, position) {
-    if (tokens[position].value === Constants.RIGHT_SQUARE_BRACKET) {
-        return position;
-    }
+    
     if (
         tokens[position].type === Constants.TRUE
-        || tokens[position].type !== Constants.FALSE
-        || tokens[position].type !== Constants.KEYWORD_NULL
-        || tokens[position].type !== Constants.STRING
-        || tokens[position].type !== Constants.NUMBER
+        || tokens[position].type === Constants.FALSE
+        || tokens[position].type === Constants.KEYWORD_NULL
+        || tokens[position].type === Constants.STRING
+        || tokens[position].type === Constants.NUMBER
     ) {
         position++;
     }
@@ -207,8 +212,10 @@ function parseArrayValues(tokens, position) {
         throw new Error('Unexpected array element');
     }
 
-    if (tokens[position].type === Constants.COMA) {
+    if (tokens[position].value === Constants.COMA) {
         position++;
-        parseArrayValues(tokens, position);
+        position = parseArrayValues(tokens, position);
     }
+
+    return position;
 }
