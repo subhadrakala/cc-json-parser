@@ -13,7 +13,6 @@ export function parseData(data) {
     }
 };
 
-
 function replaceWhiteSpace (data) {
     data = data.replace(/\s/g, '');
     data = data.replace(/\t/g, '');
@@ -47,20 +46,6 @@ function generateTokens(data) {
             tokens.push({type: Constants.STRING, value: value});
             i=j;
         }
-        else if (data[i] === "'") {
-            let value = '';
-            let j = i+1;
-            while (j < data.length && data[j] !== "'") {
-                if (data[j] === '\\') {
-                    j++;
-                    continue;
-                }
-                value = value + data[j];
-                j++;
-            }
-            tokens.push({type: Constants.STRING, value: value});
-            i=j;
-        }
         else if (/^[0-9]*$/.test(data[i])) {
             let number = '';
             let j = i;
@@ -81,6 +66,7 @@ function generateTokens(data) {
                 tokens.push({type: Constants.TRUE, value: Constants.TRUE});
             }
             else {
+                console.error(`Unexpected string: ${value}`);
                 throw new Error(`Unexpected string: ${value}`);
             }
         }
@@ -91,6 +77,7 @@ function generateTokens(data) {
                 tokens.push({type: Constants.FALSE, value: Constants.FALSE});
             }
             else {
+                console.error(`Unexpected string: ${value}`);
                 throw new Error(`Unexpected string: ${value}`);
             }
         }
@@ -101,17 +88,18 @@ function generateTokens(data) {
                 tokens.push({type: Constants.KEYWORD_NULL, value: Constants.KEYWORD_NULL});
             }
             else {
+                console.error(`Unexpected string: ${value}`);
                 throw new Error(`Unexpected string: ${value}`);
             }
         }
         else {
+            console.error(`Unexpected character: ${data[i]}`);
             throw new Error(`Unexpected character: ${data[i]}`);
         }
     }
 
     return tokens;
 }
-
 
 function analyzeSyntax(tokens, position) {
 
@@ -200,12 +188,13 @@ function parseArrayValues(tokens, position) {
     ) {
         position++;
     }
-    else if (tokens[position].type === Constants.LEFT_CURLY_BRACKET) {
+    else if (tokens[position].value === Constants.LEFT_CURLY_BRACKET) {
         position = analyzeSyntax(tokens, position);
-    }
-    else if (tokens[position].type === Constants.LEFT_SQUARE_BRACKET) {
         position++;
+    }
+    else if (tokens[position].value === Constants.LEFT_SQUARE_BRACKET) {
         position = parseArray(tokens, position);
+        position++;
     }
     else {
         console.error('Unexpected array element');
