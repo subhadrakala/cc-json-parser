@@ -1,5 +1,14 @@
 import * as Constants from "./constant.js";
 
+/*
+Function to find if a json is valid
+
+Input: 
+    data: json string
+
+Output:
+    true or false
+*/
 export function parseData(data) {
     // replace all white spaces
     data = replaceWhiteSpace(data);
@@ -13,6 +22,15 @@ export function parseData(data) {
     }
 };
 
+/*
+Function replace white space and new line
+
+Input: 
+    data: json string
+
+Output:
+    json string
+*/
 function replaceWhiteSpace (data) {
     data = data.replace(/\s/g, '');
     data = data.replace(/\t/g, '');
@@ -20,9 +38,22 @@ function replaceWhiteSpace (data) {
     return data;
 }
 
-function generateTokens(data) {
+/*
+Split a json string to meaningfull
+tokens
+
+Input: 
+    data: json string
+
+Output:
+    array of tokens
+*/
+
+export function generateTokens(data) {
     let tokens = [];
+
     for (let i=0; i< data.length; i++) {
+
         if (data[i] === Constants.RIGHT_CURLY_BRACKET
             || data[i] === Constants.LEFT_CURLY_BRACKET
             || data[i] === Constants.LEFT_SQUARE_BRACKET
@@ -30,9 +61,10 @@ function generateTokens(data) {
             || data[i] === Constants.COLON
             || data[i] === Constants.COMA
         ) {
-            tokens.push({type: Constants.SYMBOL, value: data[i]});
+            tokens.push(data[i]);
         }
         else if (data[i] === '"') {
+            // extract string
             let value = '';
             let j = i+1;
             while (j < data.length && data[j] !== '"') {
@@ -43,10 +75,11 @@ function generateTokens(data) {
                 value = value + data[j];
                 j++;
             }
-            tokens.push({type: Constants.STRING, value: value});
+            tokens.push(Constants.STRING);
             i=j;
         }
         else if (/^[0-9]*$/.test(data[i])) {
+            // extract number
             let number = '';
             let j = i;
             while (
@@ -56,14 +89,15 @@ function generateTokens(data) {
                 number = number + data[j];
                 j++;
             }
-            tokens.push({type: Constants.NUMBER, value: number});
+            tokens.push(Constants.NUMBER);
             i=j-1;
         }
         else if (data[i] === 't') {
+            // Check keyword true
             let value = data.slice(i,i+4);
             if (value === Constants.TRUE) {
                 i+=3;
-                tokens.push({type: Constants.TRUE, value: Constants.TRUE});
+                tokens.push(Constants.TRUE);
             }
             else {
                 console.error(`Unexpected string: ${value}`);
@@ -71,10 +105,12 @@ function generateTokens(data) {
             }
         }
         else if (data[i] === 'f') {
+            // Check keyword false
             let value = data.slice(i,i+5);
             if (value === Constants.FALSE) {
                 i+=4;
-                tokens.push({type: Constants.FALSE, value: Constants.FALSE});
+                //tokens.push({type: Constants.FALSE, value: Constants.FALSE});
+                tokens.push(Constants.FALSE);
             }
             else {
                 console.error(`Unexpected string: ${value}`);
@@ -82,10 +118,11 @@ function generateTokens(data) {
             }
         }
         else if (data[i] === 'n') {
+            // Check keyword null
             let value = data.slice(i,i+4);
             if (value === Constants.KEYWORD_NULL) {
                 i+=3;
-                tokens.push({type: Constants.KEYWORD_NULL, value: Constants.KEYWORD_NULL});
+                tokens.push(Constants.KEYWORD_NULL);
             }
             else {
                 console.error(`Unexpected string: ${value}`);
@@ -101,52 +138,67 @@ function generateTokens(data) {
     return tokens;
 }
 
-function analyzeSyntax(tokens, position) {
+/* 
+Analyze if the given set of tokens
+has valid json syntax
+*/
 
-    if (tokens[position].value !== Constants.LEFT_CURLY_BRACKET) {
+export function analyzeSyntax(tokens, position) {
+
+    // Json should start with {
+    if (tokens[position] !== Constants.LEFT_CURLY_BRACKET) { 
         console.error('Json should start with {');
         throw new Error('Json should start with {');
     }
     position++;
 
-    if (tokens[position].value !== Constants.RIGHT_CURLY_BRACKET) {
+    // parse the contents inside { if its not empty
+    if (tokens[position] !== Constants.RIGHT_CURLY_BRACKET) {
         position = parseObject(tokens, position);
     }
 
-    if (tokens[position].value !== Constants.RIGHT_CURLY_BRACKET) {
+    // Json should end with }
+    if (tokens[position] !== Constants.RIGHT_CURLY_BRACKET) {
         console.error('Expected a }');
         throw new Error('Expected a }');
     }
+
     return position;
 }
 
-function  parseObject(tokens, position) {
+/* 
+Parse key : values 
+*/
+function parseObject(tokens, position) {
 
-    if (tokens[position].type !== Constants.STRING) {
+    // Inside, we should have key : value format
+    if (tokens[position] !== Constants.STRING) {
         console.error('Expected a string key');
         throw new Error('Expected a string key');
     }
     position++;
 
-    if (tokens[position].value !== Constants.COLON) {
+    if (tokens[position] !== Constants.COLON) {
         console.error('Expected a colon :');
         throw new Error('Expected a colon :');
     }
 
     position++;
 
-    if (tokens[position].value === Constants.LEFT_CURLY_BRACKET) {
+    // nested Json usecase
+    if (tokens[position] === Constants.LEFT_CURLY_BRACKET) {
         position = analyzeSyntax(tokens,position);
     }
-    else if (tokens[position].value === Constants.LEFT_SQUARE_BRACKET) {
+    else if (tokens[position] === Constants.LEFT_SQUARE_BRACKET) {
+        // Array as value
         position = parseArray(tokens,position);
     }
     else if (
-        tokens[position].type !== Constants.TRUE
-        && tokens[position].type !== Constants.FALSE
-        && tokens[position].type !== Constants.KEYWORD_NULL
-        && tokens[position].type !== Constants.STRING
-        && tokens[position].type !== Constants.NUMBER
+        tokens[position] !== Constants.TRUE
+        && tokens[position] !== Constants.FALSE
+        && tokens[position] !== Constants.KEYWORD_NULL
+        && tokens[position] !== Constants.STRING
+        && tokens[position] !== Constants.NUMBER
     ) {
         console.error('Expected a value');
         throw new Error('Expected a value');
@@ -154,7 +206,9 @@ function  parseObject(tokens, position) {
 
     position++;
 
-    if (tokens[position].value === Constants.COMA) {
+    // We need to again check for key: value if we
+    // encounter a coma
+    if (tokens[position] === Constants.COMA) {
         position++;
         position = parseObject(tokens, position);
     }
@@ -162,13 +216,18 @@ function  parseObject(tokens, position) {
     return position;
 }
 
-function parseArray(tokens, position) {
+/* 
+Ensures input has proper array format
+*/
+export function parseArray(tokens, position) {
     position++;
-    if (tokens[position].value !== Constants.RIGHT_SQUARE_BRACKET) {
+    // Parse array elements if its not empty
+    if (tokens[position] !== Constants.RIGHT_SQUARE_BRACKET) {
         position = parseArrayValues(tokens, position);
     }
 
-    if (tokens[position].value === Constants.RIGHT_SQUARE_BRACKET) {
+    // Array ends with right square bracket ]
+    if (tokens[position] === Constants.RIGHT_SQUARE_BRACKET) {
         return position;
     }
     else {
@@ -180,19 +239,21 @@ function parseArray(tokens, position) {
 function parseArrayValues(tokens, position) {
     
     if (
-        tokens[position].type === Constants.TRUE
-        || tokens[position].type === Constants.FALSE
-        || tokens[position].type === Constants.KEYWORD_NULL
-        || tokens[position].type === Constants.STRING
-        || tokens[position].type === Constants.NUMBER
+        tokens[position] === Constants.TRUE
+        || tokens[position] === Constants.FALSE
+        || tokens[position] === Constants.KEYWORD_NULL
+        || tokens[position] === Constants.STRING
+        || tokens[position] === Constants.NUMBER
     ) {
         position++;
     }
-    else if (tokens[position].value === Constants.LEFT_CURLY_BRACKET) {
+    else if (tokens[position] === Constants.LEFT_CURLY_BRACKET) {
+        // Json objects inside array
         position = analyzeSyntax(tokens, position);
         position++;
     }
-    else if (tokens[position].value === Constants.LEFT_SQUARE_BRACKET) {
+    else if (tokens[position] === Constants.LEFT_SQUARE_BRACKET) {
+        // Nested arrays
         position = parseArray(tokens, position);
         position++;
     }
@@ -201,7 +262,9 @@ function parseArrayValues(tokens, position) {
         throw new Error('Unexpected array element');
     }
 
-    if (tokens[position].value === Constants.COMA) {
+    if (tokens[position] === Constants.COMA) {
+        // Array must contain some element if we
+        // encounter a coma
         position++;
         position = parseArrayValues(tokens, position);
     }

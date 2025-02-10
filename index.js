@@ -1,6 +1,7 @@
 import { open } from 'node:fs/promises';
 import { parseData } from './json-parser.js';
 
+
 const args = process.argv.slice(2);
 let fileInfo = args[0];
 const fd = await open(fileInfo);

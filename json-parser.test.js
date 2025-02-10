@@ -56,4 +56,10 @@ describe('parse json test', () => {
         expect(result).toEqual(true);
     });
 
+    test('Test for {"key" : {}}', async () => {
+        const testData = '{"key" : {}}';
+        const result = await JsonParser.parseData(testData);
+        expect(result).toEqual(true);
+    });
+
 });
